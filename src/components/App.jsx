@@ -1,6 +1,6 @@
 import { Notify } from 'notiflix/build/notiflix-notify-aio';
 import { nanoid } from 'nanoid';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Form } from './Form/Form';
 import { ContactList } from './ContactList/ContactList';
 import { Filter } from './Filter/Filter';
@@ -11,90 +11,80 @@ const TEST_CONTACTS = [
   { id: 'id-3', name: 'Eden Clements', number: '645-17-79' },
   { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
 ];
-const INITIAL_STATE = {
-  contacts: [...TEST_CONTACTS],
-  filter: '',
-};
 
 const LS_KEY = 'savedContacts';
-export class App extends React.Component {
-  state = { ...INITIAL_STATE };
 
-  handelSubmit = ({ name, number }) => {
+export const App = () => {
+  const [contacts, setContacts] = useState([]);
+  const [filter, setFilter] = useState('');
+  const [firstRender, setFirstRender] = useState(true);
+
+  const handelSubmit = ({ name, number }) => {
     const id = nanoid();
-    this.setState(({ contacts }) => ({
-      contacts: [...contacts, { id, name, number }],
-    }));
+    setContacts(prevContacts => [...prevContacts, { id, name, number }]);
 
     Notify.success(`Contact ${name} added successfully`);
   };
 
-  handelDelete = id => {
-    this.setState(prevState => {
-      const newContacts = prevState.contacts.filter(
-        contact => contact.id !== id
-      );
+  const handelDelete = id => {
+    setContacts(prevContacts => {
+      const newContacts = prevContacts.filter(contact => contact.id !== id);
       Notify.success(`Contact deleted successfully`);
-      return { contacts: newContacts };
+      return newContacts;
     });
   };
 
-  filteredContacts() {
-    const { contacts, filter } = this.state;
-    return contacts.filter(contact =>
+  const filteredContacts = () =>
+    contacts.filter(contact =>
       contact.name.toLowerCase().includes(filter.toLowerCase())
     );
-  }
 
-  handelChange = e => {
-    this.setState({ [e.target.name]: e.target.value });
+  const handelChange = e => {
+    setFilter(e.target.value);
   };
 
-  componentDidMount() {
+  useEffect(() => {
     try {
-      const contacts = JSON.parse(localStorage.getItem(LS_KEY));
-      if (contacts) {
-        this.setState({ contacts });
+      const localStorageContacts = JSON.parse(localStorage.getItem(LS_KEY));
+      if (localStorageContacts) {
+        setContacts(localStorageContacts);
+      } else {
+        setContacts(TEST_CONTACTS);
       }
     } catch (err) {
       console.error('Get state error: ', err.message);
     }
-  }
+  }, []);
 
-  componentDidUpdate(_, prevState) {
+  useEffect(() => {
+    if (firstRender) {
+      setFirstRender(false);
+      return;
+    }
     try {
-      if (prevState.contacts !== this.state.contacts) {
-        localStorage.setItem(LS_KEY, JSON.stringify(this.state.contacts));
-      }
+      localStorage.setItem(LS_KEY, JSON.stringify(contacts));
     } catch (err) {
       console.error('Set state error: ', err.message);
     }
-  }
+  }, [firstRender, contacts]);
 
-  render() {
-    return (
-      <div
-        style={{
-          height: '100vh',
-          display: 'flex',
-          // justifyContent: 'center',
-          alignItems: 'center',
-          flexDirection: 'column',
-          // fontSize: 40,
-          color: '#010101',
-        }}
-      >
-        <h1>Phonebook</h1>
-        <Form onSubmit={this.handelSubmit} contacts={this.state.contacts} />
-        {!!this.state.contacts.length && (
-          <Filter onChange={this.handelChange} filter={this.state.filter} />
-        )}
-        {!!this.state.contacts.length && <h2>Contacts</h2>}
-        <ContactList
-          contacts={this.filteredContacts()}
-          onDelete={this.handelDelete}
-        />
-      </div>
-    );
-  }
-}
+  return (
+    <div
+      style={{
+        height: '100vh',
+        display: 'flex',
+        // justifyContent: 'center',
+        alignItems: 'center',
+        flexDirection: 'column',
+        // fontSize: 40,
+        color: '#010101',
+      }}
+    >
+      <h1>Phonebook</h1>
+      <Form onSubmit={handelSubmit} contacts={contacts} />
+      {!!contacts.length && <Filter onChange={handelChange} filter={filter} />}
+      {!!contacts.length && <h2>Contacts</h2>}
+      <ContactList contacts={filteredContacts()} onDelete={handelDelete} />
+    </div>
+  );
+};
