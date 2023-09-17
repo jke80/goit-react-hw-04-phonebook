@@ -15,9 +15,11 @@ const TEST_CONTACTS = [
 const LS_KEY = 'savedContacts';
 
 export const App = () => {
-  const [contacts, setContacts] = useState([]);
+  const [contacts, setContacts] = useState(
+    () => JSON.parse(localStorage.getItem(LS_KEY)) ?? TEST_CONTACTS
+  );
+
   const [filter, setFilter] = useState('');
-  const [firstRender, setFirstRender] = useState(true);
 
   const handelSubmit = ({ name, number }) => {
     const id = nanoid();
@@ -45,28 +47,11 @@ export const App = () => {
 
   useEffect(() => {
     try {
-      const localStorageContacts = JSON.parse(localStorage.getItem(LS_KEY));
-      if (localStorageContacts) {
-        setContacts(localStorageContacts);
-      } else {
-        setContacts(TEST_CONTACTS);
-      }
-    } catch (err) {
-      console.error('Get state error: ', err.message);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (firstRender) {
-      setFirstRender(false);
-      return;
-    }
-    try {
       localStorage.setItem(LS_KEY, JSON.stringify(contacts));
     } catch (err) {
       console.error('Set state error: ', err.message);
     }
-  }, [firstRender, contacts]);
+  }, [contacts]);
 
   return (
     <div
